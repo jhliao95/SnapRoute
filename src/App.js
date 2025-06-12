@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Button, 
   Container, 
@@ -9,15 +9,23 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  IconButton,
-  Paper
+  Paper,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  CardActions,
+  Divider,
+  Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import EXIF from 'exif-js';
 
 function App() {
   const [open, setOpen] = useState(false);
+  const [tripsDialogOpen, setTripsDialogOpen] = useState(false);
   const [tripData, setTripData] = useState({
     destination: '',
     startDate: '',
@@ -25,7 +33,16 @@ function App() {
     notes: '',
     photos: []
   });
+  const [trips, setTrips] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+
+  // 从本地存储加载行程数据
+  useEffect(() => {
+    const savedTrips = localStorage.getItem('trips');
+    if (savedTrips) {
+      setTrips(JSON.parse(savedTrips));
+    }
+  }, []);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -43,9 +60,46 @@ function App() {
     });
   };
 
-  const handleSubmit = () => {
-    console.log('提交的行程数据:', tripData);
-    handleClose();
+  const handleSubmit = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('destination', tripData.destination);
+      formData.append('startDate', tripData.startDate);
+      formData.append('endDate', tripData.endDate);
+      formData.append('notes', tripData.notes);
+      
+      tripData.photos.forEach((photo, index) => {
+        formData.append(`photos`, photo.file);
+      });
+
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save trip');
+      }
+
+      const newTrip = {
+        ...tripData,
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        photos: previewUrls.map((url, index) => ({
+          url,
+          exifData: tripData.photos[index]?.exifData || {}
+        }))
+      };
+
+      const updatedTrips = [...trips, newTrip];
+      setTrips(updatedTrips);
+      localStorage.setItem('trips', JSON.stringify(updatedTrips));
+      
+      handleClose();
+    } catch (error) {
+      console.error('Error saving trip:', error);
+      // 这里可以添加错误提示
+    }
   };
 
   const handleChange = (event) => {
@@ -127,6 +181,16 @@ function App() {
     return dd;
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ my: 4 }}>
@@ -134,15 +198,24 @@ function App() {
           SnapRoute 行程记录
         </Typography>
         
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />}
-          onClick={handleClickOpen}
-          sx={{ mt: 2 }}
-        >
-          添加行程
-        </Button>
+        <Stack direction="row" spacing={2} sx={{ mt: 2, mb: 4 }}>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />}
+            onClick={handleClickOpen}
+          >
+            添加行程
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ListAltIcon />}
+            onClick={() => setTripsDialogOpen(true)}
+          >
+            我的行程
+          </Button>
+        </Stack>
 
+        {/* 添加行程对话框 */}
         <Dialog 
           open={open} 
           onClose={handleClose}
@@ -248,6 +321,71 @@ function App() {
             <Button onClick={handleSubmit} variant="contained">
               保存
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 我的行程对话框 */}
+        <Dialog
+          open={tripsDialogOpen}
+          onClose={() => setTripsDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>我的行程记录</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              {trips.map((trip) => (
+                <Grid item xs={12} key={trip.id}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {trip.destination}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(trip.startDate)} 
+                        {trip.endDate && ` - ${formatDate(trip.endDate)}`}
+                      </Typography>
+                      {trip.notes && (
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          {trip.notes}
+                        </Typography>
+                      )}
+                    </CardContent>
+                    {trip.photos.length > 0 && (
+                      <Box sx={{ p: 2 }}>
+                        <Grid container spacing={1}>
+                          {trip.photos.map((photo, index) => (
+                            <Grid item xs={4} sm={3} md={2} key={index}>
+                              <CardMedia
+                                component="img"
+                                image={photo.url}
+                                alt={`${trip.destination} 照片 ${index + 1}`}
+                                sx={{
+                                  height: 100,
+                                  objectFit: 'cover',
+                                  borderRadius: 1
+                                }}
+                              />
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
+                    )}
+                    <Divider />
+                  </Card>
+                </Grid>
+              ))}
+              {trips.length === 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="body1" color="text.secondary" align="center">
+                    还没有添加任何行程记录
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setTripsDialogOpen(false)}>关闭</Button>
           </DialogActions>
         </Dialog>
       </Box>
