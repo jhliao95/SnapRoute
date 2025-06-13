@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -154,5 +155,40 @@ public class TripController {
     public ResponseEntity<List<Photo>> getTripRoute(@PathVariable Long tripId) {
         // TODO: 获取按时间排序的照片列表
         return ResponseEntity.ok(new ArrayList<>());
+    }
+
+    @PostMapping("/with-photo")
+    public ResponseEntity<?> createTripWithPhoto(
+            @RequestParam("title") String title,
+            @RequestParam("date") String date,
+            @RequestParam("description") String description,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        try {
+            Trip trip = new Trip();
+            trip.setTitle(title);
+            trip.setDate(LocalDate.parse(date));
+            trip.setDescription(description);
+            
+            Trip savedTrip = tripService.createTrip(trip);
+            
+            // 如果有照片，上传并设置为封面
+            if (file != null && !file.isEmpty()) {
+                Photo photo = photoService.savePhoto(file, savedTrip, null);
+                String filePath = photo.getFilePath();
+                if (filePath.contains("uploads/")) {
+                    String relativePath = filePath.substring(filePath.indexOf("uploads/") + 8);
+                    savedTrip.setImageUrl("/uploads/" + relativePath);
+                } else {
+                    savedTrip.setImageUrl("/uploads/" + filePath);
+                }
+                savedTrip = tripService.updateTrip(savedTrip.getId(), savedTrip);
+            }
+            
+            return ResponseEntity.ok(savedTrip);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "创建行程失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 } 

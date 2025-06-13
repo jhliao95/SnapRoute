@@ -1,6 +1,7 @@
 package com.snaproute.service;
 
 import com.snaproute.entity.Trip;
+import com.snaproute.model.Photo;
 import com.snaproute.repository.TripRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,23 @@ public class TripService {
     private PhotoService photoService;
 
     public List<Trip> getAllTrips() {
-        return tripRepository.findAll();
+        List<Trip> trips = tripRepository.findAll();
+        // 为每个行程加载第一张照片作为封面
+        for (Trip trip : trips) {
+            List<Photo> photos = photoService.getPhotosByTripId(trip.getId());
+            if (!photos.isEmpty()) {
+                Photo firstPhoto = photos.get(0);
+                String filePath = firstPhoto.getFilePath();
+                // 提取相对于 uploads 目录的路径
+                if (filePath.contains("uploads/")) {
+                    String relativePath = filePath.substring(filePath.indexOf("uploads/") + 8);
+                    trip.setImageUrl("/uploads/" + relativePath);
+                } else {
+                    trip.setImageUrl("/uploads/" + filePath);
+                }
+            }
+        }
+        return trips;
     }
 
     public Optional<Trip> getTripById(Long id) {
@@ -89,6 +106,22 @@ public class TripService {
     }
 
     public List<Trip> getFavoriteTrips() {
-        return tripRepository.findByIsFavoriteTrue();
+        List<Trip> trips = tripRepository.findByIsFavoriteTrue();
+        // 为每个行程加载第一张照片作为封面
+        for (Trip trip : trips) {
+            List<Photo> photos = photoService.getPhotosByTripId(trip.getId());
+            if (!photos.isEmpty()) {
+                Photo firstPhoto = photos.get(0);
+                String filePath = firstPhoto.getFilePath();
+                // 提取相对于 uploads 目录的路径
+                if (filePath.contains("uploads/")) {
+                    String relativePath = filePath.substring(filePath.indexOf("uploads/") + 8);
+                    trip.setImageUrl("/uploads/" + relativePath);
+                } else {
+                    trip.setImageUrl("/uploads/" + filePath);
+                }
+            }
+        }
+        return trips;
     }
 } 
