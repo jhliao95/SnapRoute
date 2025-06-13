@@ -139,6 +139,40 @@ public class TripController {
         }
     }
 
+    @PostMapping("/{tripId}/photos/batch")
+    public ResponseEntity<?> uploadPhotos(
+            @PathVariable Long tripId,
+            @RequestParam("files") MultipartFile[] files) {
+        try {
+            Trip trip = tripService.getTripById(tripId)
+                    .orElseThrow(() -> new RuntimeException("未找到ID为 " + tripId + " 的行程"));
+            
+            List<Photo> uploadedPhotos = new ArrayList<>();
+            List<String> failedFiles = new ArrayList<>();
+            
+            for (MultipartFile file : files) {
+                try {
+                    Photo photo = photoService.savePhoto(file, trip, null);
+                    uploadedPhotos.add(photo);
+                } catch (Exception e) {
+                    failedFiles.add(file.getOriginalFilename() + ": " + e.getMessage());
+                }
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("uploadedPhotos", uploadedPhotos);
+            response.put("totalFiles", files.length);
+            response.put("successCount", uploadedPhotos.size());
+            response.put("failedFiles", failedFiles);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "批量上传图片失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @GetMapping("/{tripId}/photos")
     public ResponseEntity<?> getTripPhotos(@PathVariable Long tripId) {
         try {
