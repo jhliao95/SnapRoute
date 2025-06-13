@@ -1,11 +1,11 @@
-com\snaproute\service\FileUploadService.class
-com\snaproute\model\Photo.class
-com\snaproute\config\FileUploadConfig.class
 com\snaproute\repository\TripRepository.class
 com\snaproute\config\WebConfig.class
 com\snaproute\service\TripService.class
 com\snaproute\controller\FileUploadController.class
+com\snaproute\SnapRouteApplication.class
+com\snaproute\service\FileUploadService.class
+com\snaproute\model\Photo.class
+com\snaproute\config\FileUploadConfig.class
 com\snaproute\controller\TripController.class
 com\snaproute\service\PhotoService.class
 com\snaproute\entity\Trip.class
-com\snaproute\SnapRouteApplication.class
