@@ -122,15 +122,31 @@ public class TripController {
     }
 
     @PostMapping("/{tripId}/photos")
-    public ResponseEntity<Photo> uploadPhoto(
+    public ResponseEntity<?> uploadPhoto(
             @PathVariable Long tripId,
             @RequestParam("file") MultipartFile file) {
         try {
-            Photo photo = photoService.processPhoto(file);
-            // TODO: 关联trip和保存到数据库
+            Trip trip = tripService.getTripById(tripId)
+                    .orElseThrow(() -> new RuntimeException("未找到ID为 " + tripId + " 的行程"));
+            
+            Photo photo = photoService.savePhoto(file, trip, null);
             return ResponseEntity.ok(photo);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "上传图片失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{tripId}/photos")
+    public ResponseEntity<?> getTripPhotos(@PathVariable Long tripId) {
+        try {
+            List<Photo> photos = photoService.getPhotosByTripId(tripId);
+            return ResponseEntity.ok(photos);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "获取图片列表失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 
