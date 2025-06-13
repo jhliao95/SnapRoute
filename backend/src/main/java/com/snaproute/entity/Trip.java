@@ -18,6 +18,7 @@ public class Trip {
     private String title;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
+    @Column
     private LocalDate date;
 
     @Column(length = 1000)
@@ -33,6 +34,9 @@ public class Trip {
     public Trip() {
         this.createdAt = LocalDate.now();
         this.isFavorite = false;
+        if (this.date == null) {
+            this.date = LocalDate.now();
+        }
     }
 
     // Getters and Setters

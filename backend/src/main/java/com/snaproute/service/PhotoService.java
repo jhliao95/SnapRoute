@@ -39,7 +39,7 @@ public class PhotoService {
     }
 
     public List<Photo> getPhotosByTripId(Long tripId) {
-        return photoRepository.findByTripId(tripId);
+        return photoRepository.findByTripIdOrderByTakenTimeOrUploadTimeAsc(tripId);
     }
 
     public void deletePhotosByTripId(Long tripId) {

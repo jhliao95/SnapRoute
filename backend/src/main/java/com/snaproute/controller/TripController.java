@@ -164,30 +164,72 @@ public class TripController {
             @RequestParam("description") String description,
             @RequestParam(value = "file", required = false) MultipartFile file) {
         try {
+            System.out.println("创建行程 - 标题: " + title + ", 日期: " + date);
+            
             Trip trip = new Trip();
             trip.setTitle(title);
-            trip.setDate(LocalDate.parse(date));
+            
+            // 解析日期
+            LocalDate parsedDate;
+            try {
+                parsedDate = LocalDate.parse(date);
+                System.out.println("解析的日期: " + parsedDate);
+            } catch (Exception e) {
+                System.out.println("日期解析失败，使用当前日期: " + e.getMessage());
+                parsedDate = LocalDate.now();
+            }
+            trip.setDate(parsedDate);
             trip.setDescription(description);
             
             Trip savedTrip = tripService.createTrip(trip);
+            System.out.println("保存的行程 - ID: " + savedTrip.getId() + ", 日期: " + savedTrip.getDate());
             
             // 如果有照片，上传并设置为封面
             if (file != null && !file.isEmpty()) {
                 Photo photo = photoService.savePhoto(file, savedTrip, null);
                 String filePath = photo.getFilePath();
+                String imageUrl;
                 if (filePath.contains("uploads/")) {
                     String relativePath = filePath.substring(filePath.indexOf("uploads/") + 8);
-                    savedTrip.setImageUrl("/uploads/" + relativePath);
+                    imageUrl = "/uploads/" + relativePath;
                 } else {
-                    savedTrip.setImageUrl("/uploads/" + filePath);
+                    imageUrl = "/uploads/" + filePath;
                 }
+                
+                // 更新行程的 imageUrl
+                savedTrip.setImageUrl(imageUrl);
                 savedTrip = tripService.updateTrip(savedTrip.getId(), savedTrip);
             }
             
             return ResponseEntity.ok(savedTrip);
         } catch (Exception e) {
+            System.out.println("创建行程失败: " + e.getMessage());
+            e.printStackTrace();
             Map<String, String> response = new HashMap<>();
             response.put("message", "创建行程失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/test-sort")
+    public ResponseEntity<?> testSort() {
+        try {
+            List<Trip> trips = tripService.getAllTrips();
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "排序测试");
+            response.put("totalTrips", trips.size());
+            response.put("trips", trips.stream().map(trip -> {
+                Map<String, Object> tripInfo = new HashMap<>();
+                tripInfo.put("id", trip.getId());
+                tripInfo.put("title", trip.getTitle());
+                tripInfo.put("date", trip.getDate());
+                tripInfo.put("createdAt", trip.getCreatedAt());
+                return tripInfo;
+            }).toList());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "测试失败: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }

@@ -23,7 +23,13 @@ public class TripService {
     private PhotoService photoService;
 
     public List<Trip> getAllTrips() {
-        List<Trip> trips = tripRepository.findAll();
+        List<Trip> trips = tripRepository.findAllByOrderByDateAsc();
+        System.out.println("获取到的行程数量: " + trips.size());
+        System.out.println("行程排序（按日期升序，最新的在最后）:");
+        for (Trip trip : trips) {
+            System.out.println("  - " + trip.getTitle() + " (日期: " + trip.getDate() + ")");
+        }
+        
         // 为每个行程加载第一张照片作为封面
         for (Trip trip : trips) {
             List<Photo> photos = photoService.getPhotosByTripId(trip.getId());
@@ -106,7 +112,7 @@ public class TripService {
     }
 
     public List<Trip> getFavoriteTrips() {
-        List<Trip> trips = tripRepository.findByIsFavoriteTrue();
+        List<Trip> trips = tripRepository.findByIsFavoriteTrueOrderByDateAsc();
         // 为每个行程加载第一张照片作为封面
         for (Trip trip : trips) {
             List<Photo> photos = photoService.getPhotosByTripId(trip.getId());
